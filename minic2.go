@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	dblib "github.com/RickConsole/minic2/database"
+	"github.com/cheynewallace/tabby"
 	_ "github.com/mattn/go-sqlite3"
 
 	prompt "github.com/c-bata/go-prompt"
@@ -138,6 +139,14 @@ func mainExecutor(c string) {
 		checkErr(err)
 		dblib.DeleteAgent(db, strings.Fields(c)[1])
 		db.Close()
+	} else if c == "help" {
+		t := tabby.New()
+		t.AddHeader("Command", "Description")
+		t.AddLine("agents", "Lists all agents connected to MiniC2")
+		t.AddLine("remove <agent ID>", "Removes agent from Database")
+		t.AddLine("interact <agent ID>", "Interacts with agent, allowing you to run commands")
+		t.AddLine("quit/exit", "Will exit MiniC2")
+		t.Print()
 	} else if c == "interact" {
 		fmt.Println("Usage: interact <agent id>")
 	} else if strings.Fields(c)[0] == "interact" && len(strings.Fields(c)) == 2 {
@@ -164,20 +173,50 @@ func agentExecutor(c string) {
 	} else if c == "sysinfo" {
 		fmt.Println("[*] Tasked beacon with: " + c)
 		tasklist[currentAgent] = append(tasklist[currentAgent], c)
-	} else if strings.Fields(c)[0] == "sleep" { // sleep command
+	} else if strings.Fields(c)[0] == "sleep" { // sleep
 		if len(strings.Fields(c)) != 2 {
 			fmt.Println("Usage: sleep <time in seconds>")
+			return
 		}
 		fmt.Println(notif + " Tasked beacon with: " + c)
 		tasklist[currentAgent] = append(tasklist[currentAgent], c)
-	} else if strings.Fields(c)[0] == "getuid" { // getuid command
+	} else if strings.Fields(c)[0] == "getuid" { // getuid
 		fmt.Println(notif + " Tasked beacon with: " + c)
-		tasklist[currentAgent] = append(tasklist[currentAgent], c)
+		tasklist[currentAgent] = append(tasklist[currentAgent], strings.Fields(c)[0])
 		return
 	} else if strings.Fields(c)[0] == "netinfo" {
 		fmt.Println(notif + "Tasked beacon with: " + strings.Fields(c)[0])
 		tasklist[currentAgent] = append(tasklist[currentAgent], c)
 		return
+	} else if strings.Fields(c)[0] == "cd" {
+		if len(strings.Fields(c)) != 2 {
+			fmt.Println("Usage: cd <dir>")
+			return
+		}
+		fmt.Println(notif + "Tasked beacon with: " + strings.Fields(c)[0])
+		tasklist[currentAgent] = append(tasklist[currentAgent], c)
+	} else if strings.Fields(c)[0] == "pwd" {
+		fmt.Println(notif + "Tasked beacon with: " + strings.Fields(c)[0])
+		tasklist[currentAgent] = append(tasklist[currentAgent], strings.Fields(c)[0])
+	} else if strings.Fields(c)[0] == "chmod" {
+		if len(strings.Fields(c)) <= 2 {
+			fmt.Println("Usage: chmod <mode> <file(s)>")
+			return
+		}
+		tasklist[currentAgent] = append(tasklist[currentAgent], c)
+	} else if strings.Fields(c)[0] == "help" {
+		t := tabby.New()
+		t.AddHeader("Command", "Description")
+		t.AddLine("sleep <time>", "Adjusts checkin frequency for the agent (in seconds)")
+		t.AddLine("sysinfo", "Queries system information of agent")
+		t.AddLine("getuid", "Retrieves user information")
+		t.AddLine("netinfo", "Retrieves network interfaces and IP addresses")
+		t.AddLine("cd <dir>", "Changes Directory")
+		t.AddLine("pwd", "Prints Working Directory")
+		t.AddLine("chmod <mode> <file(s)>", "Changes permissions of specified files")
+		t.AddLine("exec <command>", "Executes specified shell command (Pipes and arrows work!)")
+		t.AddLine("exit/background/back", "Return to MiniC2 main menu")
+		t.Print()
 	} else if strings.Fields(c)[0] == "exec" { // exec command
 		if len(strings.Fields(c)) == 1 {
 			fmt.Println("Usage: exec <shell command to run>")

