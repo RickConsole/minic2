@@ -8,7 +8,8 @@ Here are MiniC2's current features:
 
 - Communicates completely over HTTP
 - Send OS commands and recieve output (Good OPSEC)
-- Send Shell commands and recieve output (Bad OPSEC)
+- Send shell commands and recieve output (Bad OPSEC)
+- Upload and download files
 - View system information such as network interfaces, hardware, etc
 - Can handle multiple hosts
 - Adjustable sleep times for agents (beacons)
@@ -32,5 +33,4 @@ $ ./agent # That's it!
 - SSL
 - Add more OS commands
 - Build agents from the MiniC2 menu
-- Upload and Download file functionality
 - Persistence Mechanisms

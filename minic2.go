@@ -281,21 +281,24 @@ func agentExecutor(c string) {
 	} else if strings.Fields(c)[0] == "help" {
 		t := tabby.New()
 		t.AddHeader("Command", "Description")
+		t.AddLine("\n====SESSION COMMANDS====")
 		t.AddLine("sleep <time>", "Adjusts checkin frequency for the agent (in seconds)")
+		t.AddLine("exit/background/back", "Return to MiniC2 main menu")
+
+		t.AddLine("\n===OS COMMANDS===")
 		t.AddLine("sysinfo", "Queries system information of agent")
 		t.AddLine("getuid", "Retrieves user and group information")
 		t.AddLine("netinfo", "Retrieves network interfaces and IP addresses")
-		t.AddLine("\n===OS COMMANDS===")
 		t.AddLine("cd <dir>", "Changes Directory")
 		t.AddLine("pwd", "Prints Working Directory")
 		t.AddLine("chmod <mode> <file(s)>", "Changes permissions of specified files")
 		t.AddLine("mkdir <dir(s)>", "Creates specified Directories")
 		t.AddLine("ls <path>", "List the contents of the specified directory")
+
 		t.AddLine("\n====EXTRA COMMANDS====")
 		t.AddLine("download <file(s)>", "Downloads specified files")
 		t.AddLine("upload <file>", "Uploads specified file")
 		t.AddLine("exec <command>", "Executes specified shell command (Pipes and arrows work!)")
-		t.AddLine("exit/background/back", "Return to MiniC2 main menu")
 		t.Print()
 	} else if strings.Fields(c)[0] == "exec" { // exec command
 		if len(strings.Fields(c)) == 1 {
