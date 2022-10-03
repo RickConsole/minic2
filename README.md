@@ -7,8 +7,8 @@ MiniC2 is a Command and Control / Post Exploitation tool that targets Linux host
 Here are MiniC2's current features:
 
 - Communicates completely over HTTP
-- Send OS commands and recieve output (Good OPSEC)
-- Send shell commands and recieve output (Bad OPSEC)
+- Send OS commands and recieve output
+- Send shell commands and recieve output 
 - Upload and download files
 - View system information such as network interfaces, hardware, etc
 - Can handle multiple hosts
